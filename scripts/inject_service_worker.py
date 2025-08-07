@@ -4,7 +4,7 @@ from bs4 import BeautifulSoup
 code = """
 if ('serviceWorker' in navigator) {
     const scope = location.pathname.replace(/\/[^\/]+$/, '/');
-    navigator.serviceWorker.register('sw.js', { scope })
+    navigator.serviceWorker.register('sw.js', { scope, type: 'module' })
              .then(function(reg) {
                  reg.addEventListener('updatefound', function() {
                      const installingWorker = reg.installing;
