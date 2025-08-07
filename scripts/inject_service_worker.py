@@ -18,6 +18,34 @@ if ('serviceWorker' in navigator) {
                  console.log('Registration failed with ' + error);
              });
 }
+
+const dandi_max_trials = 3;
+const dandi_api = {
+  dandi: "https://api.dandiarchive.org/api",
+  linc: "https://api.lincbrain.org/api"
+};
+
+async function dandiCheckCredentials(instance, token) {
+    const api = dandi_api.get(instance);
+    const url = api + "/auth/token/";
+    const req = new Request(url, { headers: { Authorization: "token " + token } });
+    const res = await fetch(req);
+    return res.ok;
+}
+
+async function dandiGetCredentials(instance) {
+  for (let trial = 0; trial < dandi_max_trials; trial++) {
+    token = window.prompt("Token (" + instance + ")");
+    if (await dandiCheckCredentials(instance, token)) {
+      return { Authorization : "token " + token };
+    }
+  }
+  return {};
+}
+
+addEventListener("dandi_auth", async function (event) => {
+    return await dandiGetCredentials(this);
+});
 """
 
 p = ArgumentParser("Inject service worker into a html file.")
