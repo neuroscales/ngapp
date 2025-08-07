@@ -31,10 +31,9 @@ code = code.replace('sw.js', args.script)
 with open(args.input, "rt") as f:
   html = BeautifulSoup(f.read())
 
-meta = html.find('meta')
 script = html.new_tag('script')
 script.append(code)
-meta.insert(0, script)
+html.find('head').insert(0, script)
 
 with open(args.output or args.input, "wt") as f:
   f.write(html.prettify())
