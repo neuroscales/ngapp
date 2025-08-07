@@ -67,7 +67,7 @@ jobs:
           node-version: ${{ inputs.node }}
           
       - name: Install neuroglancer and dependencies
-        run: pushd neuroglancer; npm install; popd
+        run: pushd neuroglancer; npm install; npm install @jcubic/wayne; popd
         
       - name: Build site
         run: pushd neuroglancer; npm run build; popd
