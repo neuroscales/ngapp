@@ -30,7 +30,7 @@ const dandi_api = {
 };
 let dandi_header = { dandi: {}, linc: {} };
 
-async checkDandiCredentials(instance, token) {
+async function checkDandiCredentials(instance, token) {
     const api = dandi_api.get(instance);
     const url = api + "/auth/token/";
     const req = new Request(url, { headers: { Authorization: "token " + token } });
@@ -38,9 +38,9 @@ async checkDandiCredentials(instance, token) {
     return res.ok;
 }
 
-async getDandiCredentials(instance) {
+async function getDandiCredentials(instance) {
   for (let trial = 0; trials < dandi_max_trials; trial++) {
-    token = window.prompt("Token (" + instance + ")"));
+    token = window.prompt("Token (" + instance + ")");
     if (await checkcheckDandiCredentials(instance, token)) {
       dandi_header.set(instance, { Authorization : "token " + token });
       return true;
