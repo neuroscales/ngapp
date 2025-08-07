@@ -35,11 +35,5 @@ script = html.new_tag('script')
 script.append(code)
 html.find('head').insert(0, script)
 
-a = html.new_tag('a', href="wayne/hello")
-a.append('Hello')
-d = html.new_tag('div', style="height:128px;")
-d.append(a)
-html.find('body').insert(0, d)
-
 with open(args.output or args.input, "wt") as f:
   f.write(html.prettify())
