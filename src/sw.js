@@ -1,7 +1,7 @@
 // --- Wayne setup ------------------------------------------------
-import { Wayne } from 'https://cdn.jsdelivr.net/npm/@jcubic/wayne';
+importScripts('https://cdn.jsdelivr.net/npm/@jcubic/wayne/index.umd.min.js');
 
-const app = new Wayne();
+const app = new wayne.Wayne();
 // ----------------------------------------------------------------
 
 // // --- Pyodide setup ----------------------------------------------
