@@ -8,6 +8,14 @@ app.get(`/wayne/*`, async (req, res) => {
   console.log(`wayne: ${ req.url }`);
 });
 
+app.get(`https://api.dandiarchive.org/api/hello/*`, async (req, res) => {
+  console.log(`linc_hello: ${req.url}`);
+});
+
+app.get(`https://github.com/{user}/{repo}`, (req, res) => {
+    res.text(`Sorry, you can't fetch ${req.params.user} repo named ${req.params.repo}`);
+});
+
 // // --- Pyodide setup ----------------------------------------------
 // importScripts('https://cdn.jsdelivr.net/pyodide/v0.28.1/full/pyodide.js')
 
@@ -27,28 +35,16 @@ app.get(`/wayne/*`, async (req, res) => {
 // // ----------------------------------------------------------------
 
 // --- linc & dandi utilities -------------------------------------
-const dandi_max_trials = 3;
 const dandi_api = {
   dandi: "https://api.dandiarchive.org/api",
   linc: "https://api.lincbrain.org/api"
 };
+const dandi_auth = new Event("dandi_auth");
 let dandi_header = { dandi: {}, linc: {} };
 
-async function dandiCheckCredentials(instance, token) {
-    const api = dandi_api.get(instance);
-    const url = api + "/auth/token/";
-    const req = new Request(url, { headers: { Authorization: "token " + token } });
-    const res = await fetch(req);
-    return res.ok;
-}
-
-async function dandiGetCredentials(instance) {
-  for (let trial = 0; trial < dandi_max_trials; trial++) {
-    token = window.prompt("Token (" + instance + ")");
-    if (await dandiCheckCredentials(instance, token)) {
-      dandi_header.set(instance, { Authorization : "token " + token });
-      return dandi_header.get(instance);
-    }
+async function dandiAuth(instance) {
+  if (!(dandi_header.get(instance).size)) {
+    dandi_header.set(instance, await instance.dispatchEvent(dandi_auth));
   }
   return dandi_header.get(instance);
 }
@@ -66,11 +62,12 @@ async function dandiZarrRequest(api, asset_id, path, opt, auth = (async () => { 
 }
 // ----------------------------------------------------------------
 
+
 // --- capture LINC links -----------------------------------------
 async function route_linc(req, res) {
   console.log(`route_linc: ${ req.url}`);
   if (!dandi_header.linc.length) {
-    dandiGetCredentials("linc");
+    await dandiAuth("linc");
   }
   res.fetch(new Request(req.url, { headers: dandi_header.linc }));
 }
@@ -81,7 +78,7 @@ async function route_linc_zarr(req, res) {
     return await route_linc(req, res);
   }
   if (!dandi_header.linc.length) {
-    dandiGetCredentials("linc");
+    await dandiAuth("linc");
   }
   if ( req.params.path == "" ) {
     res.fetch(new Request(req.url, { headers: dandi_header.linc }));
@@ -102,7 +99,7 @@ async function route_dandi(req, res) {
   if (!dandi_header.dandi.length) {
     const head = await fetch(req.url, { method: "HEAD" });
     if (head.status == 401) {
-      dandiGetCredentials("dandi");
+      await dandiAuth("dandi");
     }
   }
   res.fetch(new Request(req.url, { headers: dandi_header.dandi }));
@@ -115,7 +112,7 @@ async function route_dandi_zarr(req, res) {
   }
   const opt = {};
   const api = dandi_api.dandi;
-  const auth = (async () => { return dandiGetCredentials("dandi"); });
+  const auth = (async () => { return await dandiAuth("dandi"); });
   res.fetch(await dandiZarrRequest(api, req.params.asset_id, req.params.path, opt, auth));
 }
 
