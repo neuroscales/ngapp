@@ -1,7 +1,7 @@
 // --- Wayne setup ------------------------------------------------
-importScripts('https://cdn.jsdelivr.net/npm/@jcubic/wayne/index.umd.min.js');
+import { Wayne } from 'https://cdn.jsdelivr.net/npm/@jcubic/wayne';
 
-const app = new wayne.Wayne();
+const app = new Wayne();
 // ----------------------------------------------------------------
 
 app.get(`/wayne/*`, async (req, res) => {
