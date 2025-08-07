@@ -63,32 +63,35 @@ async function dandiZarrRequest(api, asset_id, path, opt, auth = (async () => { 
 // ----------------------------------------------------------------
 
 // --- capture LINC links -----------------------------------------
-app.get(`${ dandi_api.linc }/assets/{asset_id}/download/{path}`, async (req, res) => {
-  if (!dandi_header.linc.length) {
-    dandiGetCredentials("linc");
-  }
-  const opt = { headers: dandi_header.linc };
-  const api = dandi_api.linc;
-  res.fetch(await dandiZarrRequest(api, req.params.asset_id, req.params.path, opt));
-});
-
-app.get(`${ dandi_api.linc }/assets/{asset_id}/download`, async (req, res) => {
+async function route_linc(req, res) {
   if (!dandi_header.linc.length) {
     dandiGetCredentials("linc");
   }
   res.fetch(new Request(req.url, { headers: dandi_header.linc }));
-});
+}
+
+async function route_linc_zarr(req, res) {
+  if ( req.params.path == "" ) {
+    return await route_linc(req, res);
+  }
+  if (!dandi_header.linc.length) {
+    dandiGetCredentials("linc");
+  }
+  if ( req.params.path == "" ) {
+    res.fetch(new Request(req.url, { headers: dandi_header.linc }));
+  }
+  const opt = { headers: dandi_header.linc };
+  const api = dandi_api.linc;
+  res.fetch(await dandiZarrRequest(api, req.params.asset_id, req.params.path, opt));
+}
+
+app.get(`${ dandi_api.linc }/assets/{asset_id}/download`, route_linc);
+app.get(`${ dandi_api.linc }/assets/{asset_id}/download/{path}`, route_linc_zarr);
+
 // ----------------------------------------------------------------
 
 // --- capture DANDI links ----------------------------------------
-app.get(`${ dandi_api.dandi }/assets/{asset_id}/download/{path}`, async (req, res) => {
-  const opt = {};
-  const api = dandi_api.dandi;
-  const auth = (async () => { return dandiGetCredentials("dandi"); });
-  res.fetch(await dandiZarrRequest(api, req.params.asset_id, req.params.path, opt, auth));
-});
-
-app.get(`${ dandi_api.dandi }/assets/{asset_id}/download`, async (req, res) => {
+async function route_dandi(req, res) {
   if (!dandi_header.dandi.length) {
     const head = await fetch(req.url, { method: "HEAD" });
     if (head.status == 401) {
@@ -96,5 +99,18 @@ app.get(`${ dandi_api.dandi }/assets/{asset_id}/download`, async (req, res) => {
     }
   }
   res.fetch(new Request(req.url, { headers: dandi_header.dandi }));
-});
+}
+
+async function route_dandi_zarr(req, res) {
+  if ( req.params.path == "" ) {
+    res.fetch(new Request(req.url, { headers: dandi_header.dandi }));
+  }
+  const opt = {};
+  const api = dandi_api.dandi;
+  const auth = (async () => { return dandiGetCredentials("dandi"); });
+  res.fetch(await dandiZarrRequest(api, req.params.asset_id, req.params.path, opt, auth));
+}
+
+app.get(`${ dandi_api.dandi }/assets/{asset_id}/download`, route_dandi);
+app.get(`${ dandi_api.dandi }/assets/{asset_id}/download/{path}`, route_dandi_zarr);
 // ----------------------------------------------------------------
