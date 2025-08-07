@@ -49,7 +49,7 @@ async function dandiGetCredentials(instance) {
   return dandi_header.get(instance);
 }
 
-async function dandiZarrRequest(api, asset_id, path, opt, auth) {
+async function dandiZarrRequest(api, asset_id, path, opt, auth = async () => { return {}; }) {
   const url_info = `${ api }/assets/${ asset_id }/info/`;
   let res = await fetch(new Request(url_info, opt));
   if ((await res.status) == 401) {
@@ -63,17 +63,16 @@ async function dandiZarrRequest(api, asset_id, path, opt, auth) {
 // ----------------------------------------------------------------
 
 // --- capture LINC links -----------------------------------------
-app.get('https://api.lincbrain.org/api/assets/{asset_id}/download/{path}', async (req, res) => {
+app.get(`${ dandi_api.linc }/assets/{asset_id}/download/{path}`, async (req, res) => {
   if (!dandi_header.linc.length) {
     dandiGetCredentials("linc");
   }
   const opt = { headers: dandi_header.linc };
   const api = dandi_api.linc;
-  const auth = (async () => { return dandiGetCredentials("linc")});
-  res.fetch(await dandiZarrRequest(api, req.params.asset_id, req.params.path, opt, auth));
+  res.fetch(await dandiZarrRequest(api, req.params.asset_id, req.params.path, opt));
 });
 
-app.get('https://api.lincbrain.org/api/assets/{asset_id}/download', async (req, res) => {
+app.get(`${ dandi_api.linc }/assets/{asset_id}/download`, async (req, res) => {
   if (!dandi_header.linc.length) {
     dandiGetCredentials("linc");
   }
@@ -82,19 +81,20 @@ app.get('https://api.lincbrain.org/api/assets/{asset_id}/download', async (req, 
 // ----------------------------------------------------------------
 
 // --- capture DANDI links ----------------------------------------
-app.get('https://api.dandiarchive.org/api/assets/{asset_id}/download/{path}', async (req, res) => {
+app.get(`${ dandi_api.dandi }/assets/{asset_id}/download/{path}`, async (req, res) => {
   const opt = {};
   const api = dandi_api.dandi;
-  const auth = (async () => { return dandiGetCredentials("dandi")});
+  const auth = (async () => { return dandiGetCredentials("dandi"); });
   res.fetch(await dandiZarrRequest(api, req.params.asset_id, req.params.path, opt, auth));
 });
 
-app.get('https://api.lincbrain.org/api/assets/{asset_id}/download', async (req, res) => {
-  try {
-    res.fetch(new Request(req.url, { headers: dandi_header.dandi }));
-  } catch(error) {
-    dandiGetCredentials("dandi");
-    res.fetch(new Request(req.url, { headers: dandi_header.dandi }));
+app.get(`${ dandi_api.dandi }/assets/{asset_id}/download`, async (req, res) => {
+  if (!dandi_header.dandi.length) {
+    const head = await fetch(req.url, { method: "HEAD" });
+    if ((await head.status) == 401) {
+      dandiGetCredentials("dandi");
+    }
   }
+  res.fetch(new Request(req.url, { headers: dandi_header.dandi }));
 });
 // ----------------------------------------------------------------
