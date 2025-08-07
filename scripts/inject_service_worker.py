@@ -24,7 +24,7 @@ p = ArgumentParser("Inject service worker into a html file.")
 p.add_argument('-i', '--input', default='index.html')
 p.add_argument('-o', '--output', default=None)
 p.add_argument('-s', '--script', default='sw.js')
-args = p.parse()
+args = p.parse_args()
 
 code = code.replace('sw.js', args.script)
 
