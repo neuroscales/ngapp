@@ -4,6 +4,10 @@ importScripts('https://cdn.jsdelivr.net/npm/@jcubic/wayne/index.umd.min.js');
 const app = new wayne.Wayne();
 // ----------------------------------------------------------------
 
+app.get(`/wayne/*`, async (req, res) => {
+  console.log(`wayne: ${ req.url }`);
+});
+
 // // --- Pyodide setup ----------------------------------------------
 // importScripts('https://cdn.jsdelivr.net/pyodide/v0.28.1/full/pyodide.js')
 
@@ -64,6 +68,7 @@ async function dandiZarrRequest(api, asset_id, path, opt, auth = (async () => { 
 
 // --- capture LINC links -----------------------------------------
 async function route_linc(req, res) {
+  console.log(`route_linc: ${ req.url}`);
   if (!dandi_header.linc.length) {
     dandiGetCredentials("linc");
   }
@@ -71,6 +76,7 @@ async function route_linc(req, res) {
 }
 
 async function route_linc_zarr(req, res) {
+  console.log(`route_linc_zarr: ${ req.url}`);
   if ( req.params.path == "" ) {
     return await route_linc(req, res);
   }
@@ -92,6 +98,7 @@ app.get(`${ dandi_api.linc }/assets/{asset_id}/download/{path}`, route_linc_zarr
 
 // --- capture DANDI links ----------------------------------------
 async function route_dandi(req, res) {
+  console.log(`route_dandi: ${ req.url}`);
   if (!dandi_header.dandi.length) {
     const head = await fetch(req.url, { method: "HEAD" });
     if (head.status == 401) {
@@ -102,6 +109,7 @@ async function route_dandi(req, res) {
 }
 
 async function route_dandi_zarr(req, res) {
+  console.log(`route_dandi_zarr: ${ req.url}`);
   if ( req.params.path == "" ) {
     res.fetch(new Request(req.url, { headers: dandi_header.dandi }));
   }
