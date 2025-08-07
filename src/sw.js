@@ -22,7 +22,7 @@ const app = new wayne.Wayne();
 // let pyodideReadyPromise = main();
 // // ----------------------------------------------------------------
 
-// --- /linc/ & /dandi/ utilities ---------------------------------
+// --- linc & dandi utilities -------------------------------------
 const dandi_max_trials = 3;
 const dandi_api = {
   dandi: "https://api.dandiarchive.org/api",
@@ -50,28 +50,28 @@ async function getDandiCredentials(instance) {
 }
 // ----------------------------------------------------------------
 
-// --- /linc/ API -------------------------------------------------
-app.get('/linc/{url}', async (req, res) => {
+// --- capture LINC links -----------------------------------------
+app.get('https://api.lincbrain.org/api/*', async (req, res) => {
   const header = dandi_header.linc;
   if (!header.length) {
     getDandiCredentials("linc");
   }
-  res.fetch(new Request(url, { header: header }));
+  res.fetch(new Request(req.url, { header: header }));
 });
 // ----------------------------------------------------------------
 
-// --- /dandi/ API ------------------------------------------------
-app.get('/dandi/{url}', async (req, res) => {
+// --- capture DANDI links ----------------------------------------
+app.get('https://api.dandiarchive.org/api/*', async (req, res) => {
   const opt = {};
   if (dandi_header.dandi.length) {
     opt.header = dandi_header.dandi;
   }
   try {
-    res.fetch(new Request(url, opt));
+    res.fetch(new Request(req.url, opt));
   } catch(error) {
     if (getDandiCredentials("dandi")) {
       opt.header = dandi_header.dandi;
-      res.fetch(new Request(url, opt));
+      res.fetch(new Request(req.url, opt));
     }
   }
 });
