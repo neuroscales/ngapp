@@ -49,10 +49,10 @@ async function dandiGetCredentials(instance) {
   return dandi_header.get(instance);
 }
 
-async function dandiZarrRequest(api, asset_id, path, opt, auth = async () => { return {}; }) {
+async function dandiZarrRequest(api, asset_id, path, opt, auth = (async () => { return {}; })) {
   const url_info = `${ api }/assets/${ asset_id }/info/`;
   let res = await fetch(new Request(url_info, opt));
-  if ((await res.status) == 401) {
+  if (res.status == 401) {
     opt.headers = await auth();
     res = await fetch(new Request(url_info, opt));
   }
@@ -91,7 +91,7 @@ app.get(`${ dandi_api.dandi }/assets/{asset_id}/download/{path}`, async (req, re
 app.get(`${ dandi_api.dandi }/assets/{asset_id}/download`, async (req, res) => {
   if (!dandi_header.dandi.length) {
     const head = await fetch(req.url, { method: "HEAD" });
-    if ((await head.status) == 401) {
+    if (head.status == 401) {
       dandiGetCredentials("dandi");
     }
   }
