@@ -43,7 +43,7 @@ async function dandiCheckCredentials(instance, token) {
 }
 
 async function dandiGetCredentials(instance) {
-  for (let trial = 0; trials < dandi_max_trials; trial++) {
+  for (let trial = 0; trial < dandi_max_trials; trial++) {
     token = window.prompt("Token (" + instance + ")");
     if (await dandiCheckCredentials(instance, token)) {
       dandi_header.set(instance, { Authorization : "token " + token });
