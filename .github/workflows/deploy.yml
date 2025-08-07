@@ -85,7 +85,7 @@ jobs:
           python scripts/inject_service_worker.py -i neuroglancer/dist/client/index.html
           cp src/sw.js neuroglancer/dist/client/
       
-      - run: tree dist
+      - run: tree neuroglancer/dist/client
       
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
