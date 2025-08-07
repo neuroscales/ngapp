@@ -36,5 +36,5 @@ script = html.new_tag('script')
 script.append(code)
 meta.insert(0, script)
 
-with open(args.output or args.input, "wt") a f:
+with open(args.output or args.input, "wt") as f:
   f.write(html.prettify())
