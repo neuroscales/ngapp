@@ -56,7 +56,7 @@ app.get('/linc/{url}', async (req, res) => {
   if (!header.length) {
     getDandiCredentials("linc");
   }
-  res.fetch(Request(url, { header: header }));
+  res.fetch(new Request(url, { header: header }));
 });
 // ----------------------------------------------------------------
 
@@ -67,11 +67,11 @@ app.get('/dandi/{url}', async (req, res) => {
     opt.header = dandi_header.dandi;
   }
   try {
-    res.fetch(Request(url, opt));
+    res.fetch(new Request(url, opt));
   } catch(error) {
     if (getDandiCredentials("dandi")) {
       opt.header = dandi_header.dandi;
-      res.fetch(Request(url, opt));
+      res.fetch(new Request(url, opt));
     }
   }
 });
