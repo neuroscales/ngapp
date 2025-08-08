@@ -44,30 +44,60 @@ async function dandiCheckCredentials(instance) {
   return res.ok;
 }
 
+function dandiAuthReset(instance) {
+  if (!instance) {
+    dandiAuthReset("dandi");
+    dandiAuthReset("linc");
+    return;
+  }
+  dandi_auth[instance].token = null;
+  dandi_auth[instance].header = {};
+}
+
+function dandiAuthResetIfDefined(instance) {
+  if (!instance) {
+    dandiAuthResetIfDefined("dandi");
+    dandiAuthResetIfDefined("linc");
+    return;
+  }
+  if (dandi_auth[instance].token) {
+    dandi_auth[instance].token = null;
+    dandi_auth[instance].header = {};
+  }
+}
+
+function dandiAuthResetIfUndefined(instance) {
+  if (!instance) {
+    dandiAuthResetIfUndefined("dandi");
+    dandiAuthResetIfUndefined("linc");
+    return;
+  }
+  if (!(dandi_auth[instance].token)) {
+    dandi_auth[instance].token = null;
+    dandi_auth[instance].header = {};
+  }
+}
+
 // Receive credentials from the main thread
 channel_dandi_auth.onmessage = async (event) => {
-  // Page unloaded/reloaded -> replace undefined by null to prompt again
   if (event.data.reset_if_undefined) {
-    if (!dandi_auth.dandi.token) {
-      dandi_auth.dandi.token = null;
-    }
-    if (!dandi_auth.linc.token) {
-      dandi_auth.linc.token = null;
-    }
+    // Page unloaded/reloaded -> replace undefined by null to prompt again
+    dandiAuthResetIfUndefined();
+    return;
   }
-  // Prompt response
   const instance = event.data.instance;
   if (event.data.token !== undefined) {
+    // Prompt response
     dandi_auth[instance].token = event.data.token;
     dandi_auth[instance].header = event.data.header;
     if (!(await dandiCheckCredentials(instance))) {
-      dandi_auth[instance].token = null;
-      dandi_auth[instance].header = {};
+      dandiAuthReset(instance);
     }
-  // Prompt canceled or empty -> store undefined to avoid asking again
   } else {
+    // Prompt canceled or empty -> store undefined to avoid asking again
     dandi_auth[instance].token = undefined;
   }
+  // Acknowledge reception
   channel_dandi_auth.postMessage({ receipt: true });
 };
 
@@ -83,24 +113,15 @@ async function dandiAuth(instance) {
   return dandi_auth[instance].header;
 }
 
-async function dandiZarrURL(api, asset_id, path, opt, auth = (async () => { return {}; })) {
+async function dandiZarrURL(api, asset_id, path, opt, instance) {
   const url_info = `${ api }/assets/${ asset_id }/info/`;
   let res = await fetch(new Request(url_info, opt));
-  if (res.status == 401) {
+  if (res.status == 401 && dandi_auth[instance].token !== undefined) {
     console.log("fetch -> auth");
-    res = await fetch(new Request(url_info, { headers: await auth() }));
+    dandiAuthReset(instance);
+    const header = await dandiAuth(instance);
+    res = await fetch(new Request(url_info, { headers: header }));
   }
-  if (res.status == 401) {
-    return undefined;
-  }
-  const json = await res.json();
-  const zarr_id = json.zarr;
-  return `${ api }/zarr/${ zarr_id }/files?prefix=${ path }&download=true`;
-}
-
-async function lincZarrURL(api, asset_id, path, opt) {
-  const url_info = `${ api }/assets/${ asset_id }/info/`;
-  const res = await fetch(new Request(url_info, opt));
   if (res.status == 401) {
     return undefined;
   }
@@ -111,29 +132,36 @@ async function lincZarrURL(api, asset_id, path, opt) {
 // ----------------------------------------------------------------
 
 
-// --- capture LINC links -----------------------------------------
-async function route_linc(req, res) {
+// --- capture DANDI links ----------------------------------------
+async function route_dandi_instance(req, res, instance) {
   // Single asset (plain or zarr file) -> add auth headers and fetch
-  console.log(`route_linc: ${ req.url}`);
-  res.fetch(new Request(req, { headers: await dandiAuth("linc") }));
+  console.log(`route_${ instance }: ${ req.url }`);
+
+  if (dandi_auth[instance].token === null) {
+    const head = await fetch(req, { method: "HEAD" });
+    if (head.status == 401) {
+      console.log("head -> auth");
+      await dandiAuth(instance);
+    }
+  }
+
+  res.fetch(new Request(req, { headers: dandi_auth[instance].header }));
 }
 
-async function route_linc_zarr(req, res) {
+async function route_dandi_instance_zarr(req, res, instance) {
   // There is something after /download/ so this is likely a zarr file
   // -> we need to fetch the zarr if and redirect to the zarr file link
-  console.log(`route_linc_zarr: ${ req.url }"`);
-  const api = dandi_api.linc;
+  console.log(`route_${ instance }_zarr: ${ req.url}`);
+  const api = dandi_api[instance];
   const asset_id = req.params.asset_id;
   const prefix = `${ api }/assets/${ asset_id }/download/`;
   const path = req.url.slice(prefix.length);
 
   if (!path) {
-    // Nothing after /download/ -> defer to single asset route
-    return await route_linc(req, res);
+    return await route_dandi_instance(req, res, instance);
   }
-  const header = await dandiAuth("linc");
-  const zurl = await lincZarrURL(api, asset_id, path, { headers: header });
-  console.log('zarr url:', zurl);
+  const opt = { headers: dandi_auth[instance].header };
+  const zurl = await dandiZarrURL(api, asset_id, path, opt, instance);
   if (zurl === undefined) {
     res.blob(null, { status: 401 });
   } else {
@@ -141,45 +169,29 @@ async function route_linc_zarr(req, res) {
   }
 }
 
-app.get(`${ dandi_api.linc }/zarr/{zarr_id}/*`, route_linc);
-app.get(`${ dandi_api.linc }/assets/{asset_id}/download/*`, route_linc_zarr);
-// ----------------------------------------------------------------
-
-// --- capture DANDI links ----------------------------------------
 async function route_dandi(req, res) {
-  console.log(`route_dandi: ${ req.url }`);
-  let header = dandi_auth.dandi.header;
-  if (!(header.length)) {
-    const head = await fetch(req, { method: "HEAD" });
-    console.log("head", head);
-    if (head.status == 401) {
-      console.log("head -> auth");
-      header = await dandiAuth("dandi");
-    }
-  }
-  res.fetch(new Request(req, { headers: header }));
+  return await route_dandi_instance(req, res, "dandi");
 }
 
 async function route_dandi_zarr(req, res) {
-  console.log(`route_dandi_zarr: ${ req.url}`);
-  const api = dandi_api.dandi;
-  const asset_id = req.params.asset_id;
-  const prefix = `${ api }/assets/${ asset_id }/download/`;
-  const path = req.url.slice(prefix.length);
-
-  if (!path) {
-    return await route_dandi(req, res);
-  }
-  const header = { headers: dandi_auth.dandi.header };
-  const auth = (async () => { return await dandiAuth("dandi"); });
-  const zurl = await dandiZarrURL(api, asset_id, path, header, auth);
-  if (zurl === undefined) {
-    res.blob(null, { status: 401 });
-  } else {
-    res.redirect(zurl);
-  }
+  return await route_dandi_instance_zarr(req, res, "dandi");
 }
 
 app.get(`${ dandi_api.dandi }/zarr/{zarr_id}/*`, route_dandi);
 app.get(`${ dandi_api.dandi}/assets/{asset_id}/download/*`, route_dandi_zarr);
+// ----------------------------------------------------------------
+
+
+
+// --- capture LINC links -----------------------------------------
+async function route_linc(req, res) {
+  return await route_dandi_instance(req, res, "linc");
+}
+
+async function route_linc_zarr(req, res) {
+  return await route_dandi_instance_zarr(req, res, "linc");
+}
+
+app.get(`${ dandi_api.linc }/zarr/{zarr_id}/*`, route_linc);
+app.get(`${ dandi_api.linc }/assets/{asset_id}/download/*`, route_linc_zarr);
 // ----------------------------------------------------------------
