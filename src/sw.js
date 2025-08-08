@@ -1,11 +1,19 @@
 // --- Wayne setup ------------------------------------------------
-import { Wayne } from 'wayne.js';
+import { Wayne } from '/wayne.js';
 
 const app = new Wayne();
 // ----------------------------------------------------------------
 
 app.get(`/wayne/*`, async (req, res) => {
   console.log(`wayne: ${ req.url }`);
+});
+
+app.get(`https://github.com/{user}/{repo}`, async (req, res) => {
+  console.log(`github: ${ req.params.user }/${ req.params.repo }`);
+});
+
+app.get(`https://github.com/{user}/{repo}/*`, async (req, res) => {
+  console.log(`github: ${ req.params.user }/${ req.params.repo }`);
 });
 
 // addEventListener('install', event => {
