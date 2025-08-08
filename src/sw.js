@@ -1,5 +1,5 @@
 // --- Wayne setup ------------------------------------------------
-import { Wayne } from 'https://cdn.jsdelivr.net/npm/@jcubic/wayne';
+import { Wayne } from 'wayne.js';
 
 const app = new Wayne();
 // ----------------------------------------------------------------
