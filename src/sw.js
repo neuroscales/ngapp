@@ -1,5 +1,5 @@
 // --- Wayne setup ------------------------------------------------
-import { Wayne } from '/wayne.js';
+import { Wayne } from '/ngapp/wayne.js';
 
 const app = new Wayne();
 // ----------------------------------------------------------------
