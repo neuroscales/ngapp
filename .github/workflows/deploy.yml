@@ -32,19 +32,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     
+      - name: Checkout current branch
+        uses: actions/checkout@v4
+          
       - name: Checkout neuroglancer (latest tag - step 1)
         if: ${{ inputs.neuroglancer == 'stable' }}
         uses: actions/checkout@v4
         with:
           repository: google/neuroglancer
+          path: neuroglancer
         
       - name: Checkout neuroglancer (latest tag - step 2)
         if: ${{ inputs.neuroglancer == 'stable' }}
         run: |
+          cd neuroglancer
           git fetch --tags
           latestTag=$(git describe --tags "$(git rev-list --tags --max-count=1)")
           echo $latestTag
           git checkout $latestTag
+          cd ..
 
       - name: Checkout neuroglancer (specific tag / branch /  commit)
         if: ${{ inputs.neuroglancer != 'stable' }}
@@ -53,19 +59,38 @@ jobs:
           repository: google/neuroglancer
           ref: ${{ inputs.neuroglancer }}
           fetch-depth: 0
+          path: neuroglancer
           
-      - uses: actions/setup-node@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ inputs.node }}
+          
       - name: Install neuroglancer and dependencies
-        run: npm install
+        run: pushd neuroglancer; npm install; popd
+        
       - name: Build site
-        run: npm run build
-      - run: tree dist
+        run: pushd neuroglancer; npm run build; popd
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+
+      - name: Install script dependencies
+        run: |
+          pip install -U pip
+          pip install beautifulsoup4
+      
+      - name: Inject system worker
+        run: |
+          python scripts/inject_service_worker.py -i neuroglancer/dist/client/index.html
+          cp src/*.js neuroglancer/dist/client/
+      
+      - run: tree neuroglancer/dist/client
+      
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: 'dist/client'
+          path: 'neuroglancer/dist/client'
 
   deploy:
     needs: build
