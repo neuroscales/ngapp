@@ -252,7 +252,6 @@ export function RouteParser() {
         for (let i=keys.length; i--;) {
             const key = keys[i];
             const route = input[key];
-            console.log("pick loop:", key, url, origin);
             let pattern;
             // check if origin match for full URL
             const re = /:\/\/([^\/]+)(\/.*)/;
@@ -263,25 +262,21 @@ export function RouteParser() {
                 if (key_origin.match(/\*/)) {
                     const re = new RegExp(key_origin.replace(/\*/g, glob_re));
                     if (!origin.match(re)) {
-                        console.log("glob - origin does not match");
                         continue;
                     }
                 } else {
                     const url = new URL(key);
                     if (url.origin !== origin) {
-                        console.log("full - origin does not match");
                         continue;
                     }
                 }
                 pattern = m[2];
             } else if (!same_origin(origin)) {
                 // skip different origin
-                console.log("? - origin does not match");
                 continue;
             } else {
                 pattern = key;
             }
-            console.log("match!", pattern);
             const parts = parse(pattern);
             route.forEach(({ handler, options }) => {
                 const caseSensitive = options.caseSensitive ?? true;
@@ -605,6 +600,7 @@ export class Wayne {
                             }
                             const fns = [...this._middlewares, ...handlers(match)];
                             req.params = selected_route.data;
+                            console.log("picked route for:", origin, path, "is:", selected_route);
                             setTimeout(function() {
                                 reject('Timeout Error');
                             }, this._timeout);
