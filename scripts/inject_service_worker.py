@@ -19,33 +19,38 @@ if ('serviceWorker' in navigator) {
              });
 }
 
-const dandi_max_trials = 3;
-const dandi_api = {
-  dandi: "https://api.dandiarchive.org/api",
-  linc: "https://api.lincbrain.org/api"
+// get auth message from service worker
+const channel_dandi_auth = new BroadcastChannel('channel-dandi-auth');
+let dandi_prompting = false;
+let dandi_message_received = true;
+
+channel_dandi_auth.onmessage = (event) => {
+  // acknowledge message was received
+  if (event.data.receipt) {
+    dandi_message_received = true;
+    return
+  }
+  // otherwise, it's a prompt query
+  console.log("prompt token");
+  if (dandi_prompting || !dandi_message_received) {
+    return;
+  }
+  dandi_prompting = true;
+  const token = window.prompt("Token (" + event.data.instance + ")");
+  if (token != "") {
+    console.log("send token to worker")
+    dandi_message_received = false;
+    channel_dandi_auth.postMessage({
+      instance: event.data.instance,
+      token: token,
+      header: { Authorization: "token " + token }
+    });
+  }
+  dandi_prompting = false;
 };
 
-async function dandiCheckCredentials(instance, token) {
-    const api = dandi_api.get(instance);
-    const url = api + "/auth/token/";
-    const req = new Request(url, { headers: { Authorization: "token " + token } });
-    const res = await fetch(req);
-    return res.ok;
-}
-
-async function dandiGetCredentials(instance) {
-  for (let trial = 0; trial < dandi_max_trials; trial++) {
-    token = window.prompt("Token (" + instance + ")");
-    if (await dandiCheckCredentials(instance, token)) {
-      return { Authorization : "token " + token };
-    }
-  }
-  return {};
-}
-
-addEventListener("dandi_auth", async function (event) => {
-    return await dandiGetCredentials(this);
-});
+// start accepting messages from worker
+navigator.serviceWorker.startMessages();
 """
 
 p = ArgumentParser("Inject service worker into a html file.")
@@ -62,6 +67,15 @@ with open(args.input, "rt") as f:
 script = html.new_tag('script')
 script.append(code)
 html.find('head').insert(0, script)
+
+a1 = html.new_tag('a', href="wayne/hello/hola", string="Hello\n")
+a2 = html.new_tag('a', href="https://github.com/balbasty/ngtools", string="Bonjour\n")
+a3 = html.new_tag('a', href="https://api.lincbrain.org/api/assets/c233f1b0-eaf2-4cf8-80e5-c14c23a943c5/download/.zgroup", string="LINC\n")
+div = html.new_tag('div', style="height:128px;")
+div.append(a1)
+div.append(a2)
+div.append(a3)
+html.body.insert(0, div)
 
 with open(args.output or args.input, "wt") as f:
   f.write(html.prettify())
