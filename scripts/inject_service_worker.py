@@ -1,7 +1,8 @@
 from argparse import ArgumentParser
 from bs4 import BeautifulSoup
 
-code = """
+code_head = """
+<script>
 if ('serviceWorker' in navigator) {
     const scope = location.pathname.replace(/\/[^\/]+$/, '/');
     navigator.serviceWorker.register('/ngapp/sw.js', { scope: '/ngapp/', type: 'module' })
@@ -57,8 +58,99 @@ if ('serviceWorker' in navigator) {
 
     // start accepting messages from worker
     navigator.serviceWorker.startMessages();
-    
 }
+</script>
+"""
+
+code_body = """
+<dialog id="dandi-auth-dialog">
+  <form method="dialog">
+    <p>
+      <label id="dandi-auth-prompt">
+        <span>Enter your <b>{instance}</b> Token: </span>
+        <input type="text" required />
+      </label>
+    </p>
+    <div>
+      <button id="dandi-auth-cancel">Cancel</button>
+      <button id="dandi-auth-ok">OK</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+const channel_dandi_auth = new BroadcastChannel('channel-dandi-auth');
+let dandi_prompting = false;
+let dandi_message_received = true;
+
+// setup dialog box
+const dandiDialog = document.getElementById("dandi-auth-dialog");
+const dandiLabel = document.getElementById("dandi-auth-prompt");
+const dandiOK = dandiDialog.querySelector("#dandi-auth-ok");
+const dandiCancel = dandiDialog.querySelector("#dandi-auth-cancel");
+const dandiToken = dandiLabel.getElementsByTagName("input")[0];
+const dandiInstance = dandiLabel.getElementsByTagName("span")[0].getElementsByTagName("b")[0];
+
+dandiDialog.addEventListener("close", (e) => {
+  dandi_prompting = false;
+});
+
+dandiOK.addEventListener("click", (e) => {
+  dandiDialog.close();
+  dandi_message_received = false;
+  const instance = dandiInstance.textContent.toLocaleLowerCase();
+  const token = dandiToken.value;
+  if (token) {
+    channel_dandi_auth.postMessage({
+      instance: instance,
+      token: token,
+      header: { Authorization: "token " + token }
+    });
+  } else {
+    channel_dandi_auth.postMessage({
+      instance: instance,
+      token: undefined,
+    });
+  }
+});
+
+dandiCancel.addEventListener("click", (e) => {
+  dandiDialog.close();
+  dandi_message_received = false;
+  const instance = dandiInstance.textContent.toLocaleLowerCase();
+  channel_dandi_auth.postMessage({
+    instance: instance,
+    token: undefined,
+  });
+});
+
+// two-way communication
+channel_dandi_auth.onmessage = (event) => {
+  if (event.data.receipt) {
+    // acknowledge message was received
+    dandi_message_received = true;
+    return
+  }
+  else if (dandi_prompting || !dandi_message_received) {
+    // do not prompt while we're already prompting or waiting
+    return;
+  }
+  // otherwise, it's a valid prompt query
+  dandi_prompting = true;
+  const dandiDialog = document.getElementById("dandi-auth-dialog");
+  const dandiLabel = document.getElementById("dandi-auth-prompt");
+  const dandiInstance = dandiLabel.getElementsByTagName("span")[0].getElementsByTagName("b")[0];
+  dandiInstance.textContent = event.data.instance.toUpperCase();
+  dandiDialog.showModal();
+};
+
+window.onbeforeunload = (event) => {
+  channel_dandi_auth.postMessage({ reset_if_undefined: true });
+};
+
+// start accepting messages from worker
+navigator.serviceWorker.startMessages();
+</script>
 """
 
 p = ArgumentParser("Inject service worker into a html file.")
@@ -72,9 +164,8 @@ code = code.replace('sw.js', args.script)
 with open(args.input, "rt") as f:
   html = BeautifulSoup(f.read())
 
-script = html.new_tag('script')
-script.append(code)
-html.find('head').insert(0, script)
+html.find('head').insert(0, code_head)
+html.find('body').insert(0, code_body)
 
 with open(args.output or args.input, "wt") as f:
   f.write(html.prettify())
