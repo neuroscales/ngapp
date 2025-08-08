@@ -4,26 +4,6 @@ import { Wayne } from '/ngapp/wayne.js';
 const app = new Wayne();
 // ----------------------------------------------------------------
 
-app.get(`/wayne/*`, async (req, res) => {
-  console.log(`wayne: ${ req.url }`);
-});
-
-app.get(`https://github.com/{user}/{repo}`, async (req, res) => {
-  console.log(`github: ${ req.params.user }/${ req.params.repo }`);
-});
-
-app.get(`https://github.com/{user}/{repo}/*`, async (req, res) => {
-  console.log(`github: ${ req.params.user }/${ req.params.repo }`);
-});
-
-// addEventListener('install', event => {
-//     event.waitUntil(self.skipWaiting());
-// });
-
-// addEventListener('activate', event => {
-//     event.waitUntil(self.clients.claim());
-// });
-
 // --- linc & dandi utilities -------------------------------------
 const dandi_api = {
   dandi: "https://api.dandiarchive.org/api",
