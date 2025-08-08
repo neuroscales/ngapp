@@ -18,46 +18,6 @@ if ('serviceWorker' in navigator) {
                  // registration failed
                  console.log('Registration failed with ' + error);
              });
-
-    // get auth message from service worker
-    const channel_dandi_auth = new BroadcastChannel('channel-dandi-auth');
-    let dandi_prompting = false;
-    let dandi_message_received = true;
-
-    channel_dandi_auth.onmessage = (event) => {
-      // acknowledge message was received
-      if (event.data.receipt) {
-        dandi_message_received = true;
-        return
-      }
-      // otherwise, it's a prompt query
-      if (dandi_prompting || !dandi_message_received) {
-        return;
-      }
-      dandi_prompting = true;
-      const token = window.prompt("Token (" + event.data.instance + ")");
-      dandi_message_received = false;
-      if (token) {
-        channel_dandi_auth.postMessage({
-          instance: event.data.instance,
-          token: token,
-          header: { Authorization: "token " + token }
-        });
-      } else {
-        channel_dandi_auth.postMessage({
-          instance: event.data.instance,
-          token: undefined,
-        });
-      }
-      dandi_prompting = false;
-    };
-
-    window.onbeforeunload = (event) => {
-      channel_dandi_auth.postMessage({ reset_if_undefined: true });
-    };
-
-    // start accepting messages from worker
-    navigator.serviceWorker.startMessages();
 }
 </script>
 """
