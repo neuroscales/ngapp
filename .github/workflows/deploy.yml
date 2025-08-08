@@ -83,7 +83,7 @@ jobs:
       - name: Inject system worker
         run: |
           python scripts/inject_service_worker.py -i neuroglancer/dist/client/index.html
-          cp src/sw.js neuroglancer/dist/client/
+          cp src/*.js neuroglancer/dist/client/
       
       - run: tree neuroglancer/dist/client
       
