@@ -164,8 +164,8 @@ code_head = code_head.replace('sw.js', args.script)
 with open(args.input, "rt") as f:
   html = BeautifulSoup(f.read())
 
-html.find('head').insert(0, BeautifulSoup((code_head))
-html.find('body').insert(0, BeautifulSoup((code_body))
+html.find('head').insert(0, BeautifulSoup(code_head))
+html.find('body').insert(0, BeautifulSoup(code_body))
 
 with open(args.output or args.input, "wt") as f:
   f.write(html.prettify())
