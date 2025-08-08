@@ -159,7 +159,7 @@ p.add_argument('-o', '--output', default=None)
 p.add_argument('-s', '--script', default='sw.js')
 args = p.parse_args()
 
-code = code.replace('sw.js', args.script)
+code_head = code_head.replace('sw.js', args.script)
 
 with open(args.input, "rt") as f:
   html = BeautifulSoup(f.read())
