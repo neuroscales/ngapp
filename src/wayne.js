@@ -575,6 +575,7 @@ export class Wayne {
             if (filter(event.request) === false) {
                 return;
             }
+            console.log("fetch event:", event.request.url);
             const promise = new Promise(async (resolve, reject) => {
                 const req = event.request;
                 try {
